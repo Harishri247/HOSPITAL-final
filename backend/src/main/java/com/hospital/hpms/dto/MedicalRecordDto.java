@@ -33,6 +33,7 @@ public class MedicalRecordDto {
         private String treatment;
         private Long prescriptionId;
         private String notes;
+        private LocalDate followUpDate;
     }
 
     @Getter
@@ -54,6 +55,7 @@ public class MedicalRecordDto {
         private String treatment;
         private Long prescriptionId;
         private String notes;
+        private LocalDate followUpDate;
         private LocalDateTime createdAt;
     }
 }

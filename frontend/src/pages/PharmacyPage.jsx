@@ -251,7 +251,7 @@ export default function PharmacyPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 font-display">
-            <Pill className="text-teal-600 dark:text-teal-400" /> Pharmacy & Inventory Management
+            <Pill className="text-blue-600 dark:text-sky-400" /> Pharmacy & Inventory Management
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Monitor stock levels, batch numbers, supplier chains, and dispense medications with regulatory governance
@@ -261,7 +261,7 @@ export default function PharmacyPage() {
           {canManage && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
             >
               <Plus size={16} /> Add Medicine
             </button>
@@ -282,11 +282,11 @@ export default function PharmacyPage() {
       {message && (
         <div className={`p-4 rounded-xl flex items-center justify-between text-sm shadow-sm ${
           message.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+            ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-sky-300 border border-blue-200 dark:border-blue-800' 
             : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
         }`}>
           <div className="flex items-center gap-2">
-            {message.type === 'success' ? <CheckCircle size={16} className="text-emerald-600" /> : <XCircle size={16} className="text-rose-600" />}
+            {message.type === 'success' ? <CheckCircle size={16} className="text-blue-600" /> : <XCircle size={16} className="text-rose-600" />}
             <span className="font-medium">{message.text}</span>
           </div>
           <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600 font-bold ml-4">×</button>
@@ -319,7 +319,7 @@ export default function PharmacyPage() {
               placeholder="Search by medication name, generic name, category, supplier..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
             />
           </div>
           <button
@@ -335,7 +335,7 @@ export default function PharmacyPage() {
             onClick={() => setFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               filter === 'ALL'
-                ? 'bg-teal-600 text-white shadow-xs'
+                ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
             }`}
           >
@@ -462,7 +462,7 @@ export default function PharmacyPage() {
                   <th className="px-5 py-3">Category & Form</th>
                   <th className="px-5 py-3">Supplier</th>
                   <th className="px-5 py-3">Batch / Expiry</th>
-                  <th className="px-5 py-3 text-right">Unit Price</th>
+                  <th className="px-5 py-3 text-right">Unit Price (₹)</th>
                   <th className="px-5 py-3 text-center">Stock Level</th>
                   <th className="px-5 py-3 text-center">Status</th>
                   {canManage && <th className="px-5 py-3 text-right">Actions</th>}
@@ -472,7 +472,7 @@ export default function PharmacyPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={canManage ? 8 : 7} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <RefreshCw className="animate-spin inline mr-2 text-teal-600" size={18} />
+                      <RefreshCw className="animate-spin inline mr-2 text-blue-600" size={18} />
                       Loading pharmacy inventory...
                     </td>
                   </tr>
@@ -540,7 +540,7 @@ export default function PharmacyPage() {
 
                         {/* Unit Price */}
                         <td className="px-5 py-4 text-right font-semibold text-gray-900 dark:text-white">
-                          ${med.unitPrice ? Number(med.unitPrice).toFixed(2) : '0.00'}
+                          ₹{med.unitPrice ? Number(med.unitPrice).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
                         </td>
 
                         {/* Stock Level with FIXED Reorder Threshold (FR8) */}
@@ -564,7 +564,7 @@ export default function PharmacyPage() {
                               <AlertTriangle size={12} /> Low Stock
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-sky-300">
                               <CheckCircle size={12} /> Normal
                             </span>
                           )}
@@ -581,7 +581,7 @@ export default function PharmacyPage() {
                                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                                   : isControlled
                                   ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                  : 'bg-teal-600 hover:bg-teal-700 text-white'
+                                  : 'bg-blue-600 hover:bg-blue-700 text-white'
                               }`}
                               title={isOut ? 'Cannot dispense: Out of stock' : 'Dispense to patient'}
                             >
@@ -637,7 +637,7 @@ export default function PharmacyPage() {
               </div>
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Available Stock</span>
-                <span className="text-base font-bold text-teal-600 dark:text-teal-400">
+                <span className="text-base font-bold text-blue-600 dark:text-sky-400">
                   {dispenseMedicine.stockQuantity} units
                 </span>
               </div>
@@ -726,7 +726,7 @@ export default function PharmacyPage() {
               </label>
               <div className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-200 flex items-center gap-2">
                 <span className="font-semibold">{dispenseForm.pharmacistName}</span>
-                <span className="text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded border border-teal-200 dark:border-teal-800 ml-auto">
+                <span className="text-xs text-blue-600 dark:text-sky-400 bg-sky-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-sky-200 dark:border-blue-800 ml-auto">
                   Staff ID: {user?.staffId || 'PHM-VERIFIED'}
                 </span>
               </div>
@@ -782,7 +782,7 @@ export default function PharmacyPage() {
                 className={`px-5 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex items-center gap-1.5 shadow-sm ${
                   isMedControlled(dispenseMedicine)
                     ? 'bg-purple-700 hover:bg-purple-800 disabled:opacity-50'
-                    : 'bg-teal-600 hover:bg-teal-700 disabled:opacity-50'
+                    : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-50'
                 }`}
               >
                 {dispenseSubmitting ? (
@@ -907,7 +907,7 @@ export default function PharmacyPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Unit Price ($) *</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Unit Price (₹) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -967,7 +967,7 @@ export default function PharmacyPage() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Save Medication
             </button>
@@ -1028,7 +1028,7 @@ export default function PharmacyPage() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Update Stock
             </button>

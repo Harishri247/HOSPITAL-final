@@ -34,33 +34,43 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     List<Patient> searchPatientsList(@Param("query") String query);
 
     @Query("SELECT DISTINCT p FROM Patient p WHERE " +
+           "p.primaryDoctorId = :doctorId OR " +
            "EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.patientId = p.id AND m.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM Prescription pr WHERE pr.patientId = p.id AND pr.doctorId = :doctorId) OR " +
-           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId)")
+           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId) OR " +
+           "EXISTS (SELECT 1 FROM AdmissionOrder ao WHERE ao.patientId = p.id AND ao.doctorId = :doctorId)")
     List<Patient> findPatientsByDoctorId(@Param("doctorId") Long doctorId);
 
     @Query("SELECT DISTINCT p FROM Patient p WHERE " +
-           "(EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
+           "(p.primaryDoctorId = :doctorId OR " +
+           "EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.patientId = p.id AND m.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM Prescription pr WHERE pr.patientId = p.id AND pr.doctorId = :doctorId) OR " +
-           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId))")
+           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId) OR " +
+           "EXISTS (SELECT 1 FROM AdmissionOrder ao WHERE ao.patientId = p.id AND ao.doctorId = :doctorId))")
     Page<Patient> findPatientsByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Patient p WHERE " +
-           "(EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
+           "(p.primaryDoctorId = :doctorId OR " +
+           "EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.patientId = p.id AND m.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM Prescription pr WHERE pr.patientId = p.id AND pr.doctorId = :doctorId) OR " +
-           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId)) AND " +
+           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId) OR " +
+           "EXISTS (SELECT 1 FROM AdmissionOrder ao WHERE ao.patientId = p.id AND ao.doctorId = :doctorId)) AND " +
            "(cast(:query as string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.patientNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "p.phoneNumber LIKE CONCAT('%', :query, '%'))")
     List<Patient> searchPatientsByDoctorId(@Param("doctorId") Long doctorId, @Param("query") String query);
 
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Patient p WHERE p.id = :patientId AND (" +
+           "p.primaryDoctorId = :doctorId OR " +
            "EXISTS (SELECT 1 FROM Appointment a WHERE a.patientId = p.id AND a.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.patientId = p.id AND m.doctorId = :doctorId) OR " +
            "EXISTS (SELECT 1 FROM Prescription pr WHERE pr.patientId = p.id AND pr.doctorId = :doctorId) OR " +
-           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId))")
+           "EXISTS (SELECT 1 FROM LabOrder lo WHERE lo.patientId = p.id AND lo.doctorId = :doctorId) OR " +
+           "EXISTS (SELECT 1 FROM AdmissionOrder ao WHERE ao.patientId = p.id AND ao.doctorId = :doctorId))")
     boolean isPatientAssignedToDoctor(@Param("patientId") Long patientId, @Param("doctorId") Long doctorId);
+
+    Page<Patient> findByIdIn(List<Long> ids, Pageable pageable);
 }

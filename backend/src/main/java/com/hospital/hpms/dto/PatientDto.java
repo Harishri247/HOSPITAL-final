@@ -37,6 +37,8 @@ public class PatientDto {
         private String insuranceId;
         private String status;
         private Long userId;
+        private Long primaryDoctorId;
+        private Long assignedNurseId;
     }
 
     @Getter
@@ -59,6 +61,12 @@ public class PatientDto {
         private LocalDate registrationDate;
         private String status;
         private Long userId;
+        private Long primaryDoctorId;
+        private String primaryDoctorName;
+        private Long assignedNurseId;
+        private String assignedNurseName;
+        private String bedNumber;
+        private String wardName;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
     }

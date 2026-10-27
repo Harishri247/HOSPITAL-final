@@ -6,6 +6,7 @@ import { FileText, PlusCircle, Search, User, AlertCircle } from 'lucide-react';
 
 export const MedicalRecordsPage = () => {
   const { user, hasRole } = useAuth();
+  const isPatient = hasRole(['ROLE_PATIENT']) || user?.role === 'ROLE_PATIENT' || user?.role === 'PATIENT';
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [records, setRecords] = useState([]);
@@ -38,10 +39,29 @@ export const MedicalRecordsPage = () => {
 
   const loadPatients = async () => {
     try {
-      const res = await patientApi.getAll();
-      setPatients(res.data || []);
-      if (res.data && res.data.length > 0) {
-        setSelectedPatientId(res.data[0].id);
+      if (isPatient) {
+        let myPat = null;
+        try {
+          const meRes = await patientApi.getMe();
+          myPat = meRes.data;
+        } catch (e) {
+          try {
+            const allP = await patientApi.getAll();
+            myPat = (allP.data || [])[0] || null;
+          } catch (e2) {}
+        }
+        if (myPat) {
+          setPatients([myPat]);
+          setSelectedPatientId(myPat.id);
+        } else {
+          setPatients([]);
+        }
+      } else {
+        const res = await patientApi.getAll();
+        setPatients(res.data || []);
+        if (res.data && res.data.length > 0) {
+          setSelectedPatientId(res.data[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -101,7 +121,7 @@ export const MedicalRecordsPage = () => {
         {hasRole(['ROLE_DOCTOR', 'ROLE_ADMIN']) && (
           <button
             onClick={openAddModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-teal-600/20 transition"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 transition"
           >
             <PlusCircle className="w-4 h-4" /> Add Examination Record
           </button>
@@ -109,21 +129,42 @@ export const MedicalRecordsPage = () => {
       </div>
 
       {/* Patient Selector */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-3 text-xs">
-        <User className="w-4 h-4 text-slate-400" />
-        <label className="font-semibold text-slate-700 dark:text-slate-200">Select Patient Chart:</label>
-        <select
-          value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
-          className="flex-1 max-w-md p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
-        >
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.patientNumber}) &bull; {p.gender}, {p.age} yrs &bull; {p.phoneNumber}
-            </option>
-          ))}
-        </select>
-      </div>
+      {isPatient ? (
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-blue-950/50 text-blue-600 dark:text-sky-400 flex items-center justify-center font-bold text-lg">
+              👤
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100 text-sm block">
+                {patients[0]?.name || user?.fullName || 'Your Health Record'}
+              </span>
+              <span className="text-slate-500 text-[11px]">
+                MRN: {patients[0]?.patientNumber || 'Patient'} &bull; Blood Group: {patients[0]?.bloodGroup || 'N/A'}
+              </span>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-sky-50 dark:bg-blue-950/40 text-blue-700 dark:text-sky-300 font-semibold rounded-full border border-sky-200 dark:border-blue-800 text-[11px]">
+            Personal Health Chart
+          </span>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-3 text-xs">
+          <User className="w-4 h-4 text-slate-400" />
+          <label className="font-semibold text-slate-700 dark:text-slate-200">Select Patient Chart:</label>
+          <select
+            value={selectedPatientId}
+            onChange={(e) => setSelectedPatientId(e.target.value)}
+            className="flex-1 max-w-md p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
+          >
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.patientNumber}) &bull; {p.gender}, {p.age} yrs &bull; {p.phoneNumber}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Records History Feed */}
       <div className="space-y-4">
@@ -145,7 +186,7 @@ export const MedicalRecordsPage = () => {
                     {r.diagnosis}
                   </h3>
                   <span className="text-slate-500 text-[11px]">
-                    Attending Physician: <strong className="text-teal-600 dark:text-teal-400">{r.doctorName}</strong>
+                    Attending Physician: <strong className="text-blue-600 dark:text-sky-400">{r.doctorName}</strong>
                   </span>
                 </div>
                 <span className="text-slate-400 font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">
@@ -160,7 +201,7 @@ export const MedicalRecordsPage = () => {
 
               {r.icdCode && (
                 <div>
-                  <span className="inline-block px-2.5 py-1 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-mono font-bold text-[10px]">
+                  <span className="inline-block px-2.5 py-1 rounded-md bg-sky-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-mono font-bold text-[10px]">
                     ICD Coding: {r.icdCode}
                   </span>
                 </div>
@@ -294,7 +335,7 @@ export const MedicalRecordsPage = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl shadow-md transition"
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition"
             >
               Save Record
             </button>

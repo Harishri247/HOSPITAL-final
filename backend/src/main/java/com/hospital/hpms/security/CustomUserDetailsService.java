@@ -18,11 +18,23 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
-        // Support login using username, email, or staffId
-        User user = userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByEmail(identifier))
-                .or(() -> userRepository.findByStaffId(identifier))
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + identifier));
+        if (identifier == null || identifier.trim().isEmpty()) {
+            throw new UsernameNotFoundException("Identifier cannot be empty");
+        }
+        String cleanId = identifier.trim();
+        // Support login using username, email, staffId, or legacy email identifier (case-insensitive)
+        User user = userRepository.findByUsernameIgnoreCase(cleanId)
+                .or(() -> userRepository.findByEmailIgnoreCase(cleanId))
+                .or(() -> {
+                    if (cleanId.contains("@") && !cleanId.toLowerCase().endsWith("@gmail.com")) {
+                        String local = cleanId.substring(0, cleanId.indexOf('@')).toLowerCase();
+                        return userRepository.findByEmailIgnoreCase(local + "@gmail.com");
+                    }
+                    return java.util.Optional.empty();
+                })
+                .or(() -> userRepository.findByStaffIdIgnoreCase(cleanId))
+                .or(() -> userRepository.findByPhoneNumber(cleanId))
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + cleanId));
 
         return UserPrincipal.create(user);
     }

@@ -1,15 +1,42 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../api/apiService';
+import { authApi, userApi } from '../api/apiService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('hpms_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('hpms_user');
+      return saved && saved !== 'undefined' && saved !== 'null' ? JSON.parse(saved) : null;
+    } catch (err) {
+      console.error('Failed to parse hpms_user from localStorage, clearing invalid session:', err);
+      localStorage.removeItem('hpms_user');
+      localStorage.removeItem('hpms_token');
+      return null;
+    }
   });
   const [token, setToken] = useState(() => localStorage.getItem('hpms_token') || null);
   const [loading, setLoading] = useState(false);
+
+  // Sync profile if departmentName is missing from cached session
+  useEffect(() => {
+    if (token && user?.id && !user?.departmentName && user?.departmentId) {
+      userApi.getProfile()
+        .then((res) => {
+          if (res.data?.departmentName) {
+            setUser((prev) => {
+              const updated = {
+                ...(prev || {}),
+                departmentName: res.data.departmentName,
+              };
+              localStorage.setItem('hpms_user', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [token, user?.id, user?.departmentName, user?.departmentId]);
 
   const login = async (username, password) => {
     setLoading(true);
@@ -24,6 +51,7 @@ export const AuthProvider = ({ children }) => {
         role: data.role,
         staffId: data.staffId,
         departmentId: data.departmentId,
+        departmentName: data.departmentName || null,
       };
 
       localStorage.setItem('hpms_token', data.accessToken);

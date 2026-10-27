@@ -9,4 +9,5 @@ public interface AuthService {
     AuthResponse refreshToken(RefreshTokenRequest request);
     UserProfileResponse getCurrentUserProfile(UserPrincipal principal);
     UserProfileResponse updateProfile(UserPrincipal principal, UpdateProfileRequest request);
+    AuthResponse activatePatient(PatientActivationRequest request);
 }

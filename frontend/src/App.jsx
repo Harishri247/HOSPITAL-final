@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PatientsPage from './pages/PatientsPage';
@@ -24,23 +25,24 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Public Login Route */}
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+        element={<LoginPage />}
       />
 
       {/* Authenticated Dashboard Layout */}
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <DashboardLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
 
         {/* Patients & Medical Records */}
         <Route
@@ -62,7 +64,7 @@ export default function App() {
         <Route
           path="appointments"
           element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'PATIENT']}>
+            <ProtectedRoute allowedRoles={['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PATIENT']}>
               <AppointmentsPage />
             </ProtectedRoute>
           }
@@ -131,7 +133,7 @@ export default function App() {
       </Route>
 
       {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

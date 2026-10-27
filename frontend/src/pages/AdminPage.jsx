@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, Users, Activity, FileText, Bell, CheckCircle, 
-  XCircle, Search, RefreshCw, AlertTriangle, UserCheck, Shield, Database, Cpu, UserPlus, Edit
+  XCircle, Search, RefreshCw, AlertTriangle, UserCheck, Shield, Database, Cpu, UserPlus, Edit, Trash2
 } from 'lucide-react';
 import { adminApi, userApi } from '../api/apiService';
 import RoleBadge from '../components/RoleBadge';
@@ -20,6 +20,8 @@ const EMPTY_STAFF_FORM = {
 };
 
 const getFreshStaffForm = () => ({ ...EMPTY_STAFF_FORM });
+
+const isPatientRole = (role) => role === 'ROLE_PATIENT' || role === 'PATIENT';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('USERS'); // USERS, AUDIT, HEALTH, BROADCAST
@@ -84,6 +86,11 @@ export default function AdminPage() {
   const handleUpdateRole = async (e) => {
     e.preventDefault();
     if (!selectedUser) return;
+    if (isPatientRole(selectedUser.role)) {
+      setMessage({ type: 'error', text: 'Cannot change the role of a patient to any other role.' });
+      setShowRoleModal(false);
+      return;
+    }
     try {
       await adminApi.updateRole(selectedUser.id, newRole);
       setMessage({ type: 'success', text: `Role for ${selectedUser.username} updated to ${newRole}` });
@@ -105,6 +112,22 @@ export default function AdminPage() {
       fetchTabData();
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to change status' });
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to permanently delete staff user "${user.fullName || user.username}" (@${user.username})? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await adminApi.deleteUser(user.id);
+      setMessage({ 
+        type: 'success', 
+        text: `Staff user "${user.username}" was permanently removed.` 
+      });
+      fetchTabData();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to delete staff user' });
     }
   };
 
@@ -157,7 +180,11 @@ export default function AdminPage() {
     const errors = {};
     if (!staffForm.fullName.trim()) errors.fullName = 'Full legal name is required';
     if (!staffForm.username.trim()) errors.username = 'Username is required';
-    if (!staffForm.email.trim()) errors.email = 'Official email is required';
+    if (!staffForm.email.trim()) {
+      errors.email = 'Official email is required';
+    } else if (!staffForm.email.trim().toLowerCase().endsWith('@gmail.com')) {
+      errors.email = 'Email ID must end with @gmail.com';
+    }
     if (staffModalMode === 'CREATE') {
       if (!staffForm.password) {
         errors.password = 'Initial password is required';
@@ -175,11 +202,15 @@ export default function AdminPage() {
 
     setSavingStaff(true);
     try {
+      const userRole = (staffModalMode === 'EDIT' && isPatientRole(staffForm.role))
+        ? 'ROLE_PATIENT'
+        : (staffForm.role.startsWith('ROLE_') ? staffForm.role : `ROLE_${staffForm.role}`);
+
       const payload = {
         fullName: staffForm.fullName.trim(),
         username: staffForm.username.trim(),
         email: staffForm.email.trim(),
-        role: staffForm.role.startsWith('ROLE_') ? staffForm.role : `ROLE_${staffForm.role}`,
+        role: userRole,
         staffId: staffForm.staffId.trim() || null,
         departmentId: staffForm.departmentId ? Number(staffForm.departmentId) : null,
         phoneNumber: staffForm.phoneNumber.trim() || null,
@@ -226,8 +257,16 @@ export default function AdminPage() {
     }
   };
 
+  const userCountsByRole = users.reduce((acc, u) => {
+    const norm = (u.role || '').replace(/^ROLE_/, '').toUpperCase();
+    acc[norm] = (acc[norm] || 0) + 1;
+    return acc;
+  }, {});
+
   const filteredUsers = users.filter(u => {
-    const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
+    const normalizedUserRole = (u.role || '').replace(/^ROLE_/, '').toUpperCase();
+    const normalizedFilter = (roleFilter || '').replace(/^ROLE_/, '').toUpperCase();
+    const matchRole = normalizedFilter === 'ALL' || normalizedUserRole === normalizedFilter;
     const matchSearch = !userSearch || 
       u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.fullName?.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -253,7 +292,7 @@ export default function AdminPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <ShieldAlert className="text-teal-600 dark:text-teal-400" /> System Administration & Governance
+            <ShieldAlert className="text-blue-600 dark:text-sky-400" /> System Administration & Governance
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             RBAC User management, HIPAA compliance audit trail, system telemetry, and hospital broadcasts
@@ -262,7 +301,7 @@ export default function AdminPage() {
         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm"
           >
             <UserPlus size={16} /> Add Doctor / Staff
           </button>
@@ -279,7 +318,7 @@ export default function AdminPage() {
       {message && (
         <div className={`p-4 rounded-lg flex items-center justify-between text-sm ${
           message.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+            ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-sky-300 border border-blue-200 dark:border-blue-800' 
             : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
         }`}>
           <span>{message.text}</span>
@@ -293,7 +332,7 @@ export default function AdminPage() {
           onClick={() => setActiveTab('USERS')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === 'USERS'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400 dark:border-teal-400'
+              ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -303,7 +342,7 @@ export default function AdminPage() {
           onClick={() => setActiveTab('AUDIT')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === 'AUDIT'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400 dark:border-teal-400'
+              ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -313,7 +352,7 @@ export default function AdminPage() {
           onClick={() => setActiveTab('HEALTH')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === 'HEALTH'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400 dark:border-teal-400'
+              ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -323,7 +362,7 @@ export default function AdminPage() {
           onClick={() => setActiveTab('BROADCAST')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === 'BROADCAST'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400 dark:border-teal-400'
+              ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -343,24 +382,33 @@ export default function AdminPage() {
                 placeholder="Search staff by username, name, email, or Staff ID..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
               />
             </div>
 
             <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-              {['ALL', 'ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PHARMACIST', 'LAB_TECHNICIAN', 'PATIENT'].map(r => (
-                <button
-                  key={r}
-                  onClick={() => setRoleFilter(r)}
-                  className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
-                    roleFilter === r
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                  }`}
-                >
-                  {r.replace('_', ' ')}
-                </button>
-              ))}
+              {['ALL', 'ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PHARMACIST', 'LAB_TECHNICIAN', 'PATIENT'].map(r => {
+                const count = r === 'ALL' ? users.length : (userCountsByRole[r] || 0);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRoleFilter(r)}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      roleFilter === r
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{r.replace('_', ' ')}</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] leading-none font-bold ${
+                      roleFilter === r ? 'bg-blue-700 text-sky-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -382,7 +430,7 @@ export default function AdminPage() {
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <RefreshCw className="animate-spin inline mr-2 text-teal-600" size={18} />
+                        <RefreshCw className="animate-spin inline mr-2 text-blue-600" size={18} />
                         Loading users list...
                       </td>
                     </tr>
@@ -413,7 +461,7 @@ export default function AdminPage() {
                         </td>
                         <td className="px-5 py-4 text-center">
                           {u.active ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-sky-300">
                               <CheckCircle size={12} /> Active
                             </span>
                           ) : (
@@ -429,26 +477,44 @@ export default function AdminPage() {
                           >
                             <Edit size={12} /> Edit
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedUser(u);
-                              setNewRole(u.role);
-                              setShowRoleModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors font-medium"
-                          >
-                            <Shield size={12} /> Change Role
-                          </button>
+                          {isPatientRole(u.role) ? (
+                            <span
+                              title="Cannot change the role of a patient to any other role"
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed font-medium opacity-60"
+                            >
+                              <Shield size={12} /> Change Role
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedUser(u);
+                                setNewRole(u.role);
+                                setShowRoleModal(true);
+                              }}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors font-medium"
+                            >
+                              <Shield size={12} /> Change Role
+                            </button>
+                          )}
                           <button
                             onClick={() => handleToggleStatus(u)}
                             className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded font-medium transition-colors ${
                               u.active
                                 ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 hover:bg-rose-100'
-                                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 hover:bg-emerald-100'
+                                : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-sky-300 hover:bg-blue-100'
                             }`}
                           >
                             <UserCheck size={12} /> {u.active ? 'Deactivate' : 'Activate'}
                           </button>
+                          {u.username !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded font-medium transition-colors bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100"
+                              title="Permanently remove user"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -471,7 +537,7 @@ export default function AdminPage() {
                 placeholder="Search audit trail by actor, action (e.g. LOGIN, BILL_GENERATED), or entity..."
                 value={auditSearch}
                 onChange={(e) => setAuditSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
               />
             </div>
             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -495,7 +561,7 @@ export default function AdminPage() {
                   {loading ? (
                     <tr>
                       <td colSpan={5} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <RefreshCw className="animate-spin inline mr-2 text-teal-600" size={18} />
+                        <RefreshCw className="animate-spin inline mr-2 text-blue-600" size={18} />
                         Loading HIPAA audit records...
                       </td>
                     </tr>
@@ -520,7 +586,7 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="px-5 py-3 text-xs text-gray-600 dark:text-gray-300 font-mono">
-                          {log.entityType} {log.entityId && `(#${log.entityId})`}
+                          {log.entityType || '-'}
                         </td>
                         <td className="px-5 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
                           {log.newValue || log.oldValue || '-'}
@@ -541,12 +607,12 @@ export default function AdminPage() {
           {health ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl">
                   <Activity size={24} />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">System Status</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{health.status}</p>
+                  <p className="text-xl font-bold text-blue-600 dark:text-sky-400">{health.status}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Uptime: {health.uptime}</p>
                 </div>
               </div>
@@ -574,19 +640,19 @@ export default function AdminPage() {
               </div>
 
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 rounded-xl">
+                <div className="p-3 bg-sky-100 dark:bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl">
                   <Cpu size={24} />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Release Version</p>
-                  <p className="text-xl font-bold text-teal-600 dark:text-teal-400">{health.version}</p>
+                  <p className="text-xl font-bold text-blue-600 dark:text-sky-400">{health.version}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Spring Boot 3.3.4 + React</p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
-              <RefreshCw className="animate-spin inline mr-2 text-teal-600" size={20} />
+              <RefreshCw className="animate-spin inline mr-2 text-blue-600" size={20} />
               Loading telemetry...
             </div>
           )}
@@ -615,7 +681,7 @@ export default function AdminPage() {
       {activeTab === 'BROADCAST' && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm w-full max-w-3xl">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-            <Bell className="text-teal-600" /> Dispatch Emergency Hospital Broadcast
+            <Bell className="text-blue-600" /> Dispatch Emergency Hospital Broadcast
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
             Broadcast a high-priority announcement to all doctors, nurses, receptionists, pharmacists, and lab personnel.
@@ -661,24 +727,29 @@ export default function AdminPage() {
             <p className="text-xs text-gray-400">Current Role: {selectedUser?.role}</p>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Select New System Role *
-            </label>
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-            >
-              <option value="ADMIN">ADMIN</option>
-              <option value="DOCTOR">DOCTOR</option>
-              <option value="NURSE">NURSE</option>
-              <option value="RECEPTIONIST">RECEPTIONIST</option>
-              <option value="PHARMACIST">PHARMACIST</option>
-              <option value="LAB_TECHNICIAN">LAB_TECHNICIAN</option>
-              <option value="PATIENT">PATIENT</option>
-            </select>
-          </div>
+          {isPatientRole(selectedUser?.role) ? (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+              Patients cannot be assigned to another system role. Patient accounts are strictly reserved for clinical care and self-service access.
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Select New System Role *
+              </label>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+              >
+                <option value="ROLE_ADMIN">Administrator (Full Access)</option>
+                <option value="ROLE_DOCTOR">Doctor (Clinical Lead)</option>
+                <option value="ROLE_NURSE">Nurse (Inpatient Care)</option>
+                <option value="ROLE_RECEPTIONIST">Receptionist (Front Desk)</option>
+                <option value="ROLE_PHARMACIST">Pharmacist (Dispensary)</option>
+                <option value="ROLE_LAB_TECHNICIAN">Lab Technician (Diagnostics)</option>
+              </select>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <button
@@ -690,7 +761,8 @@ export default function AdminPage() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              disabled={isPatientRole(selectedUser?.role)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Role Update
             </button>
@@ -731,7 +803,7 @@ export default function AdminPage() {
                   setStaffForm((prev) => ({ ...prev, fullName: e.target.value }));
                   if (staffFormErrors.fullName) setStaffFormErrors((prev) => ({ ...prev, fullName: null }));
                 }}
-                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none ${
                   staffFormErrors.fullName ? 'border-rose-400 focus:ring-rose-500' : ''
                 }`}
               />
@@ -748,9 +820,12 @@ export default function AdminPage() {
                 id="staff-role"
                 name="newStaffRole"
                 required
+                disabled={staffModalMode === 'EDIT' && isPatientRole(staffForm.role)}
                 value={staffForm.role}
                 onChange={(e) => setStaffForm((prev) => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none ${
+                  staffModalMode === 'EDIT' && isPatientRole(staffForm.role) ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed' : ''
+                }`}
               >
                 <option value="ROLE_DOCTOR">Doctor (Clinical Lead)</option>
                 <option value="ROLE_NURSE">Nurse (Inpatient Care)</option>
@@ -758,7 +833,15 @@ export default function AdminPage() {
                 <option value="ROLE_PHARMACIST">Pharmacist (Dispensary)</option>
                 <option value="ROLE_LAB_TECHNICIAN">Lab Technician (Diagnostics)</option>
                 <option value="ROLE_ADMIN">Administrator (Full Access)</option>
+                {isPatientRole(staffForm.role) && (
+                  <option value="ROLE_PATIENT">Patient (Self-Service Portal)</option>
+                )}
               </select>
+              {staffModalMode === 'EDIT' && isPatientRole(staffForm.role) && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Patient role is permanent and cannot be changed to another role.
+                </p>
+              )}
             </div>
 
             <div>
@@ -770,7 +853,7 @@ export default function AdminPage() {
                 name="newStaffDept"
                 value={staffForm.departmentId}
                 onChange={(e) => setStaffForm((prev) => ({ ...prev, departmentId: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
               >
                 <option value="">-- General / Hospital Wide --</option>
                 {departments.map((dept) => (
@@ -796,7 +879,7 @@ export default function AdminPage() {
                   setStaffForm((prev) => ({ ...prev, staffId: e.target.value }));
                   if (staffFormErrors.staffId) setStaffFormErrors((prev) => ({ ...prev, staffId: null }));
                 }}
-                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none ${
                   staffFormErrors.staffId ? 'border-rose-400 focus:ring-rose-500' : ''
                 }`}
               />
@@ -817,7 +900,7 @@ export default function AdminPage() {
                 placeholder="e.g. 9876543210"
                 value={staffForm.phoneNumber}
                 onChange={(e) => setStaffForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
               />
             </div>
 
@@ -839,7 +922,7 @@ export default function AdminPage() {
                   setStaffForm((prev) => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s+/g, '') }));
                   if (staffFormErrors.username) setStaffFormErrors((prev) => ({ ...prev, username: null }));
                 }}
-                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none ${
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none ${
                   staffFormErrors.username ? 'border-rose-400 focus:ring-rose-500' : ''
                 }`}
               />
@@ -850,7 +933,7 @@ export default function AdminPage() {
 
             <div>
               <label htmlFor="staff-email" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Official Email Address *
+                Official Email Address (@gmail.com) *
               </label>
               <input
                 id="staff-email"
@@ -860,13 +943,13 @@ export default function AdminPage() {
                 data-lpignore="true"
                 data-1p-ignore="true"
                 required
-                placeholder="e.g. watson@hospital.com"
+                placeholder="e.g. watson@gmail.com"
                 value={staffForm.email}
                 onChange={(e) => {
                   setStaffForm((prev) => ({ ...prev, email: e.target.value }));
                   if (staffFormErrors.email) setStaffFormErrors((prev) => ({ ...prev, email: null }));
                 }}
-                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none ${
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none ${
                   staffFormErrors.email ? 'border-rose-400 focus:ring-rose-500' : ''
                 }`}
               />
@@ -894,7 +977,7 @@ export default function AdminPage() {
                   setStaffForm((prev) => ({ ...prev, password: e.target.value }));
                   if (staffFormErrors.password) setStaffFormErrors((prev) => ({ ...prev, password: null }));
                 }}
-                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none ${
                   staffFormErrors.password ? 'border-rose-400 focus:ring-rose-500' : ''
                 }`}
               />
@@ -915,7 +998,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={savingStaff}
-              className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
               {staffModalMode === 'CREATE' ? (
                 <>

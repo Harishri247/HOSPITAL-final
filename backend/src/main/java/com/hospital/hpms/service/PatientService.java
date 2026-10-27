@@ -22,5 +22,7 @@ public interface PatientService {
     List<PatientResponse> searchPatients(String query, UserPrincipal principal);
     Map<String, Object> getPatientHistory(Long id);
     Map<String, Object> getPatientHistory(Long id, UserPrincipal principal);
+    PatientResponse allocateNurse(Long patientId, Long nurseId, UserPrincipal principal);
+    PatientResponse getMyPatientProfile(UserPrincipal principal);
     long getTotalPatientCount();
 }

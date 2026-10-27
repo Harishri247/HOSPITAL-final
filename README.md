@@ -50,7 +50,7 @@ The system includes pre-seeded demo accounts for all hospital roles. You can log
 | **Receptionist** | `receptionist` | `Recept@123` | `REC001` (Rachel Green) | Patient registration, scheduling, billing invoices |
 | **Pharmacist** | `pharmacist` | `Pharm@123` | `PHM001` (David Miller) | Medication dispensing, inventory batch & stock alerts |
 | **Lab Technician** | `labtech` | `LabTech@123` | `LAB001` (Alex Mercer) | Specimen intake, test result entry, critical value alerts |
-| **Patient** | `patient.john` | `Patient@123` | John Doe | Personal health record, upcoming visits, invoice payments |
+| **Patient** | `patient.john` | `Patient@123` | John Doe | Secure self-service: appointments, records, Rx, lab results, bills, profile (Read-only clinical) |
 
 ---
 

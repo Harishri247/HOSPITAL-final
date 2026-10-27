@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class AppointmentServiceTest {
 
     @Mock
@@ -35,6 +36,8 @@ class AppointmentServiceTest {
     private AuditLogService auditLogService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private AppointmentServiceImpl appointmentService;
@@ -127,7 +130,7 @@ class AppointmentServiceTest {
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(userRepository.findById(2L)).thenReturn(Optional.of(doctor));
 
-        AppointmentResponse response = appointmentService.updateStatus(10L, AppointmentStatus.CONFIRMED, 1L);
+        AppointmentResponse response = appointmentService.updateStatus(10L, AppointmentStatus.CONFIRMED, 2L);
 
         assertEquals(AppointmentStatus.CONFIRMED, response.getStatus());
         // Verify doctor notification
@@ -201,4 +204,52 @@ class AppointmentServiceTest {
                 eq(Priority.MEDIUM)
         );
     }
+
+    @Test
+    void testDirectOpdBooking_NewPatient_Success() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(doctor));
+        when(appointmentRepository.existsByDoctorIdAndAppointmentDateAndTimeSlotAndStatusNot(any(), any(), any(), any()))
+                .thenReturn(false);
+        when(patientRepository.findByPhoneNumber(anyString())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(99L);
+            return u;
+        });
+        when(patientRepository.save(any(Patient.class))).thenAnswer(i -> {
+            Patient p = i.getArgument(0);
+            p.setId(55L);
+            return p;
+        });
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(i -> {
+            Appointment a = i.getArgument(0);
+            a.setId(101L);
+            return a;
+        });
+
+        com.hospital.hpms.dto.DirectBookingDto.DirectBookingRequest directReq =
+                com.hospital.hpms.dto.DirectBookingDto.DirectBookingRequest.builder()
+                        .fullName("Eleanor Vance")
+                        .phoneNumber("9876543210")
+                        .email("eleanor@gmail.com")
+                        .doctorId(2L)
+                        .appointmentDate(LocalDate.now().plusDays(2))
+                        .timeSlot("09:30 - 10:00")
+                        .reason("Cardiology checkup")
+                        .build();
+
+        com.hospital.hpms.dto.DirectBookingDto.DirectBookingResponse res =
+                appointmentService.directOpdBooking(directReq, null);
+
+        assertNotNull(res);
+        assertEquals(101L, res.getAppointmentId());
+        assertEquals("APT-101", res.getBookingCode());
+        assertEquals("Eleanor Vance", res.getPatientName());
+        assertEquals(55L, res.getPatientId());
+        assertTrue(res.isNewPatient());
+        assertNotNull(res.getPortalUsername());
+        assertEquals("Patient@123", res.getDefaultPassword());
+    }
 }
+

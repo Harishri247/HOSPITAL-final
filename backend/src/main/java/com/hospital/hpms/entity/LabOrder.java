@@ -48,6 +48,44 @@ public class LabOrder {
     @Column(name = "result_date")
     private LocalDateTime resultDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", length = 20)
+    @Builder.Default
+    private Priority priority = Priority.ROUTINE;
+
+    @Column(name = "clinical_notes", columnDefinition = "TEXT")
+    private String clinicalNotes;
+
+    @Column(name = "received_date")
+    private LocalDateTime receivedDate;
+
+    @Column(name = "received_by", length = 100)
+    private String receivedBy;
+
+    @Column(name = "specimen_barcode", length = 50)
+    private String specimenBarcode;
+
+    @Column(name = "specimen_collected_date")
+    private LocalDateTime specimenCollectedDate;
+
+    @Column(name = "specimen_notes", columnDefinition = "TEXT")
+    private String specimenNotes;
+
+    @Column(name = "test_started_date")
+    private LocalDateTime testStartedDate;
+
+    @Column(name = "testing_equipment", length = 100)
+    private String testingEquipment;
+
+    @Column(name = "reviewed_date")
+    private LocalDateTime reviewedDate;
+
+    @Column(name = "doctor_review_notes", columnDefinition = "TEXT")
+    private String doctorReviewNotes;
+
+    @Column(name = "reviewed_by_doctor_id")
+    private Long reviewedByDoctorId;
+
     @PrePersist
     protected void onCreate() {
         if (this.orderedDate == null) {

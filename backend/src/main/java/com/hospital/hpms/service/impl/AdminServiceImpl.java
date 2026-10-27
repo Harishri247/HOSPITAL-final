@@ -4,6 +4,7 @@ import com.hospital.hpms.dto.AdminDto.*;
 import com.hospital.hpms.dto.AuthDto.RegisterRequest;
 import com.hospital.hpms.dto.AuthDto.UserProfileResponse;
 import com.hospital.hpms.entity.*;
+import com.hospital.hpms.exception.InvalidOperationException;
 import com.hospital.hpms.exception.ResourceNotFoundException;
 import com.hospital.hpms.repository.*;
 import com.hospital.hpms.service.*;
@@ -124,12 +125,40 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserProfileResponse> getAllUsers() {
         Map<Long, String> deptMap = departmentRepository.findAll().stream()
                 .collect(Collectors.toMap(Department::getId, Department::getName));
 
-        return userRepository.findAll().stream()
+        List<User> users = userRepository.findAll();
+        for (User u : users) {
+            String email = u.getEmail();
+            if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
+                String localPart = (email != null && email.contains("@"))
+                        ? email.substring(0, email.indexOf('@')).trim()
+                        : (u.getUsername() != null ? u.getUsername().trim() : "user" + u.getId());
+                if (localPart.isEmpty()) {
+                    localPart = u.getUsername() != null ? u.getUsername().trim() : "user" + u.getId();
+                }
+                localPart = localPart.replaceAll("[^a-zA-Z0-9._-]", "");
+                if (localPart.isEmpty()) {
+                    localPart = "user" + u.getId();
+                }
+
+                String candidateEmail = (localPart + "@gmail.com").toLowerCase();
+                int counter = 1;
+                while (userRepository.existsByEmail(candidateEmail) &&
+                        !userRepository.findByEmail(candidateEmail).map(existing -> existing.getId().equals(u.getId())).orElse(false)) {
+                    candidateEmail = (localPart + counter + "@gmail.com").toLowerCase();
+                    counter++;
+                }
+
+                u.setEmail(candidateEmail);
+                userRepository.save(u);
+            }
+        }
+
+        return users.stream()
                 .map(u -> UserProfileResponse.builder()
                         .id(u.getId())
                         .username(u.getUsername())
@@ -149,6 +178,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public UserProfileResponse createUser(RegisterRequest request, Long adminId) {
+        if (request.getEmail() == null || !request.getEmail().trim().toLowerCase().endsWith("@gmail.com")) {
+            throw new IllegalArgumentException("Email ID must end with @gmail.com");
+        }
         if (userRepository.existsByUsername(request.getUsername().trim())) {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
@@ -203,6 +235,9 @@ public class AdminServiceImpl implements AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
+        if (request.getEmail() == null || !request.getEmail().trim().toLowerCase().endsWith("@gmail.com")) {
+            throw new IllegalArgumentException("Email ID must end with @gmail.com");
+        }
         if (!user.getUsername().equalsIgnoreCase(request.getUsername().trim()) && userRepository.existsByUsername(request.getUsername().trim())) {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
@@ -220,6 +255,9 @@ public class AdminServiceImpl implements AdminService {
         user.setUsername(request.getUsername().trim());
         user.setEmail(request.getEmail().trim());
         if (request.getRole() != null) {
+            if (user.getRole() == RoleType.ROLE_PATIENT && request.getRole() != RoleType.ROLE_PATIENT) {
+                throw new InvalidOperationException("Cannot change the role of a patient to any other role");
+            }
             user.setRole(request.getRole());
         }
         user.setStaffId(request.getStaffId() != null && !request.getStaffId().trim().isEmpty() ? request.getStaffId().trim() : null);
@@ -257,6 +295,10 @@ public class AdminServiceImpl implements AdminService {
     public UserProfileResponse updateUserRole(Long userId, RoleType role, Long adminId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        if (user.getRole() == RoleType.ROLE_PATIENT && role != RoleType.ROLE_PATIENT) {
+            throw new InvalidOperationException("Cannot change the role of a patient to any other role");
+        }
 
         RoleType oldRole = user.getRole();
         user.setRole(role);
@@ -302,5 +344,18 @@ public class AdminServiceImpl implements AdminService {
                 .active(saved.isActive())
                 .createdAt(saved.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId, Long adminId) {
+        if (userId.equals(adminId)) {
+            throw new IllegalArgumentException("Cannot delete the active administrator account.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        userRepository.delete(user);
+        auditLogService.log(adminId, "USER_DELETED", "User", userId, user.getUsername(), "Staff account @" + user.getUsername() + " removed by administrator");
     }
 }

@@ -26,24 +26,45 @@ public class PrescriptionController {
             @Valid @RequestBody PrescriptionRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long userId = principal != null ? principal.getId() : null;
-        PrescriptionResponse response = prescriptionService.createPrescription(request, userId);
+        PrescriptionResponse response = prescriptionService.createPrescription(request, principal);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping
+    @PreAuthorize("hasAnyRole('PHARMACIST', 'ADMIN', 'DOCTOR', 'PATIENT')")
+    public ResponseEntity<List<PrescriptionResponse>> getPrescriptions(
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) String status,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(prescriptionService.getPrescriptions(doctorId, status, principal));
+    }
+
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('PHARMACIST', 'ADMIN', 'DOCTOR', 'NURSE', 'PATIENT')")
     public ResponseEntity<List<PrescriptionResponse>> getPrescriptionsByPatient(
             @PathVariable Long patientId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long userId = principal != null ? principal.getId() : null;
-        return ResponseEntity.ok(prescriptionService.getPrescriptionsByPatient(patientId, userId));
+        return ResponseEntity.ok(prescriptionService.getPrescriptionsByPatient(patientId, principal));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('PHARMACIST', 'ADMIN', 'DOCTOR')")
-    public ResponseEntity<List<PrescriptionResponse>> getPendingPrescriptions() {
-        return ResponseEntity.ok(prescriptionService.getPendingPrescriptions());
+    public ResponseEntity<List<PrescriptionResponse>> getPendingPrescriptions(
+            @RequestParam(required = false) Long doctorId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(prescriptionService.getPendingPrescriptions(doctorId, principal));
+    }
+
+    @GetMapping("/{id}/safety-check")
+    @PreAuthorize("hasAnyRole('PHARMACIST', 'ADMIN', 'DOCTOR')")
+    public ResponseEntity<PrescriptionSafetyCheckResponse> checkPrescriptionSafety(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(prescriptionService.checkPrescriptionSafety(id, principal));
     }
 
     @PutMapping("/{id}/dispense")
@@ -57,3 +78,4 @@ public class PrescriptionController {
         return ResponseEntity.ok(prescriptionService.dispensePrescription(id, request, userId));
     }
 }
+

@@ -54,6 +54,9 @@ public class AppointmentDto {
         private AppointmentStatus status;
         private String notes;
         private Integer queueNumber;
+        private LocalDate followUpDate;
+        private Long billId;
+        private String billingStatus;
         private LocalDateTime createdDate;
     }
 

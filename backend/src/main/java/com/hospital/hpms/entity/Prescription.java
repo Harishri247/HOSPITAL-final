@@ -60,6 +60,18 @@ public class Prescription {
     @Column(name = "dispensed_date")
     private LocalDateTime dispensedDate;
 
+    @Column(name = "medicine_id")
+    private Long medicineId;
+
+    @Column(name = "quantity_dispensed")
+    private Integer quantityDispensed;
+
+    @Column(name = "batch_number", length = 50)
+    private String batchNumber;
+
+    @Column(name = "pharmacist_notes", columnDefinition = "TEXT")
+    private String pharmacistNotes;
+
     @PrePersist
     protected void onCreate() {
         if (this.prescriptionDate == null) {

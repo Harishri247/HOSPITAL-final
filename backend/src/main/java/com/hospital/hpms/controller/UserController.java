@@ -66,6 +66,32 @@ public class UserController {
         return ResponseEntity.ok(doctors);
     }
 
+    @GetMapping("/nurses")
+    public ResponseEntity<List<UserProfileResponse>> getNurses() {
+        List<UserProfileResponse> nurses = userRepository.findByRole(RoleType.ROLE_NURSE).stream()
+                .filter(User::isActive)
+                .map(u -> {
+                    String deptName = u.getDepartmentId() != null
+                            ? departmentRepository.findById(u.getDepartmentId()).map(Department::getName).orElse(null)
+                            : null;
+                    return UserProfileResponse.builder()
+                            .id(u.getId())
+                            .username(u.getUsername())
+                            .email(u.getEmail())
+                            .fullName(u.getFullName())
+                            .role(u.getRole())
+                            .staffId(u.getStaffId())
+                            .departmentId(u.getDepartmentId())
+                            .departmentName(deptName)
+                            .phoneNumber(u.getPhoneNumber())
+                            .active(u.isActive())
+                            .createdAt(u.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(nurses);
+    }
+
     @GetMapping("/departments")
     public ResponseEntity<List<Department>> getDepartments() {
         return ResponseEntity.ok(departmentRepository.findAll());

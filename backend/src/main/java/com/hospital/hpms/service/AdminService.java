@@ -16,4 +16,5 @@ public interface AdminService {
     UserProfileResponse updateUser(Long userId, UpdateUserRequest request, Long adminId);
     UserProfileResponse updateUserRole(Long userId, RoleType role, Long adminId);
     UserProfileResponse updateUserStatus(Long userId, boolean active, Long adminId);
+    void deleteUser(Long userId, Long adminId);
 }

@@ -33,6 +33,7 @@ public class AuthDto {
 
         @NotBlank(message = "Email is required")
         @Email(message = "Email must be a valid format")
+        @Pattern(regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$", message = "Email ID must end with @gmail.com")
         private String email;
 
         @NotBlank(message = "Password is required")
@@ -69,6 +70,7 @@ public class AuthDto {
         private RoleType role;
         private String staffId;
         private Long departmentId;
+        private String departmentName;
     }
 
     @Getter
@@ -113,6 +115,21 @@ public class AuthDto {
         private String phoneNumber;
         
         @Email(message = "Valid email is required")
+        @Pattern(regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$", message = "Email ID must end with @gmail.com")
         private String email;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PatientActivationRequest {
+        @NotBlank(message = "Identifier (Phone number, Patient ID, or Email) is required")
+        private String identifier;
+
+        @NotBlank(message = "New password is required")
+        @Size(min = 6, max = 100, message = "Password must be at least 6 characters")
+        private String newPassword;
     }
 }

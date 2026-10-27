@@ -81,10 +81,11 @@ public class AdminController {
     @PutMapping("/users/{id}/role")
     public ResponseEntity<UserProfileResponse> updateUserRole(
             @PathVariable Long id,
-            @RequestParam RoleType role,
+            @RequestParam(name = "role") String role,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(adminService.updateUserRole(id, role, principal.getId()));
+        RoleType roleType = RoleType.fromString(role);
+        return ResponseEntity.ok(adminService.updateUserRole(id, roleType, principal.getId()));
     }
 
     @PutMapping("/users/{id}/status")
@@ -94,5 +95,14 @@ public class AdminController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.ok(adminService.updateUserStatus(id, active, principal.getId()));
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Map<String, String>> deleteUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        adminService.deleteUser(id, principal.getId());
+        return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
 }

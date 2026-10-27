@@ -13,6 +13,7 @@ import java.util.List;
 public interface BillRepository extends JpaRepository<Bill, Long> {
     List<Bill> findByPatientId(Long patientId);
     List<Bill> findByStatus(BillStatus status);
+    java.util.Optional<Bill> findByAppointmentId(Long appointmentId);
 
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Bill b")
     BigDecimal getTotalBilledAmount();

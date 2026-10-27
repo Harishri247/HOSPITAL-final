@@ -28,7 +28,13 @@ class WardBedServiceTest {
     @Mock
     private PatientRepository patientRepository;
     @Mock
+    private UserRepository userRepository;
+    @Mock
     private AuditLogService auditLogService;
+    @Mock
+    private AdmissionOrderRepository admissionOrderRepository;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private WardBedServiceImpl wardBedService;
@@ -55,6 +61,15 @@ class WardBedServiceTest {
         when(bedRepository.save(any(Bed.class))).thenAnswer(i -> i.getArgument(0));
         when(bedRepository.countByWardIdAndStatus(1L, BedStatus.OCCUPIED)).thenReturn(2L);
 
+        AdmissionOrder order = AdmissionOrder.builder()
+                .id(100L)
+                .patientId(2L)
+                .doctorId(1L)
+                .status(AdmissionOrderStatus.ORDERED)
+                .build();
+        when(admissionOrderRepository.findFirstByPatientIdAndStatusOrderByOrderDateDesc(2L, AdmissionOrderStatus.ORDERED))
+                .thenReturn(Optional.of(order));
+
         BedAssignRequest req = BedAssignRequest.builder().bedId(10L).patientId(2L).build();
         BedResponse res = wardBedService.assignBed(req, 1L);
 
@@ -62,6 +77,19 @@ class WardBedServiceTest {
         assertEquals(BedStatus.OCCUPIED, res.getStatus());
         assertEquals("Jane Doe", res.getPatientName());
         assertEquals(2, ward.getOccupiedBeds());
+        assertEquals(AdmissionOrderStatus.BED_ASSIGNED, order.getStatus());
+    }
+
+    @Test
+    void testAssignBed_WithoutAdmissionOrderThrowsException() {
+        when(bedRepository.findById(10L)).thenReturn(Optional.of(availableBed));
+        when(patientRepository.findById(2L)).thenReturn(Optional.of(patient));
+        when(bedRepository.findByPatientId(2L)).thenReturn(Optional.empty());
+        when(admissionOrderRepository.findFirstByPatientIdAndStatusOrderByOrderDateDesc(2L, AdmissionOrderStatus.ORDERED))
+                .thenReturn(Optional.empty());
+
+        BedAssignRequest req = BedAssignRequest.builder().bedId(10L).patientId(2L).build();
+        assertThrows(com.hospital.hpms.exception.AdmissionRequiredException.class, () -> wardBedService.assignBed(req, 1L));
     }
 
     @Test

@@ -35,6 +35,12 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/patient-activate")
+    public ResponseEntity<AuthResponse> activatePatient(@Valid @RequestBody PatientActivationRequest request) {
+        AuthResponse response = authService.activatePatient(request);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         return ResponseEntity.ok(Map.of("message", "Successfully logged out"));

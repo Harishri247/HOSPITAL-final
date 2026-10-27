@@ -40,6 +40,9 @@ public class LabResult {
     @Column(name = "verified_by", nullable = false, length = 100)
     private String verifiedBy;
 
+    @Column(name = "remarks", columnDefinition = "TEXT")
+    private String remarks;
+
     @Column(name = "result_date", nullable = false)
     private LocalDateTime resultDate;
 

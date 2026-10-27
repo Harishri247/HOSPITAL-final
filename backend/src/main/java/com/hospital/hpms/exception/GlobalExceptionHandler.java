@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler({InvalidPatientNameException.class, InvalidPhoneNumberException.class, InvalidOperationException.class})
+    @ExceptionHandler({InvalidPatientNameException.class, InvalidPhoneNumberException.class, InvalidOperationException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleBadRequestExceptions(RuntimeException ex, HttpServletRequest request) {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -71,6 +72,18 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bed Unavailable")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(AdmissionRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleAdmissionRequired(AdmissionRequiredException ex, HttpServletRequest request) {
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Admission Order Required")
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -127,6 +140,23 @@ public class GlobalExceptionHandler {
                 .message("Input validation error")
                 .path(request.getRequestURI())
                 .validationErrors(errors)
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String paramName = ex.getName();
+        Object value = ex.getValue();
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "valid format";
+        String message = String.format("Invalid parameter value '%s' for '%s'. Expected type is %s.", value, paramName, requiredType);
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(message)
+                .path(request.getRequestURI())
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }

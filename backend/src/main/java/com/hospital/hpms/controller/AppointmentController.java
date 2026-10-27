@@ -1,6 +1,7 @@
 package com.hospital.hpms.controller;
 
 import com.hospital.hpms.dto.AppointmentDto.*;
+import com.hospital.hpms.dto.ConsultationDto.*;
 import com.hospital.hpms.entity.AppointmentStatus;
 import com.hospital.hpms.entity.RoleType;
 import com.hospital.hpms.exception.UnauthorizedAccessException;
@@ -47,7 +48,15 @@ public class AppointmentController {
         if (principal != null && principal.getRole() == RoleType.ROLE_DOCTOR) {
             doctorId = principal.getId();
         }
-        return ResponseEntity.ok(appointmentService.filterAppointments(doctorId, date, status));
+        return ResponseEntity.ok(appointmentService.filterAppointments(doctorId, date, status, principal));
+    }
+
+    @GetMapping("/today")
+    public ResponseEntity<List<AppointmentResponse>> getTodayAppointments(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long doctorId = (principal != null && principal.getRole() == RoleType.ROLE_DOCTOR) ? principal.getId() : null;
+        return ResponseEntity.ok(appointmentService.filterAppointments(doctorId, LocalDate.now(), null, principal));
     }
 
     @GetMapping("/{id}")
@@ -55,21 +64,20 @@ public class AppointmentController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        AppointmentResponse appointment = appointmentService.getAppointmentById(id);
-        if (principal != null && principal.getRole() == RoleType.ROLE_DOCTOR) {
-            if (!principal.getId().equals(appointment.getDoctorId())) {
-                throw new UnauthorizedAccessException("Access denied: Doctors can only view their own appointments.");
-            }
-        }
+        AppointmentResponse appointment = appointmentService.getAppointmentById(id, principal);
         return ResponseEntity.ok(appointment);
     }
 
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByPatient(@PathVariable Long patientId) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
+    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByPatient(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId, principal));
     }
 
     @GetMapping("/doctor/{doctorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST', 'DOCTOR')")
     public ResponseEntity<List<AppointmentResponse>> getAppointmentsByDoctor(
             @PathVariable Long doctorId,
             @AuthenticationPrincipal UserPrincipal principal
@@ -118,5 +126,15 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         return ResponseEntity.ok(appointmentService.getAvailableSlots(doctorId, date));
+    }
+
+    @PostMapping("/{id}/consultation")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<ConsultationResponse> completeConsultation(
+            @PathVariable Long id,
+            @Valid @RequestBody ConsultationRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(appointmentService.completeConsultation(id, request, principal));
     }
 }

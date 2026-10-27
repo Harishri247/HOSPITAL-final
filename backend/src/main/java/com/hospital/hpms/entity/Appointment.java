@@ -55,6 +55,13 @@ public class Appointment {
     @Column(name = "follow_up_date")
     private LocalDate followUpDate;
 
+    @Column(name = "bill_id")
+    private Long billId;
+
+    @Column(name = "billing_status", length = 30)
+    @Builder.Default
+    private String billingStatus = "PENDING";
+
     @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
 

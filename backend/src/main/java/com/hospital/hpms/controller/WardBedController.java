@@ -1,5 +1,6 @@
 package com.hospital.hpms.controller;
 
+import com.hospital.hpms.dto.AdmissionOrderDto.*;
 import com.hospital.hpms.dto.WardBedDto.*;
 import com.hospital.hpms.security.UserPrincipal;
 import com.hospital.hpms.service.WardBedService;
@@ -85,7 +86,7 @@ public class WardBedController {
     }
 
     @PostMapping("/beds/assign")
-    @PreAuthorize("hasAnyRole('NURSE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
     public ResponseEntity<BedResponse> assignBed(
             @Valid @RequestBody BedAssignRequest request,
             @AuthenticationPrincipal UserPrincipal principal
@@ -95,7 +96,7 @@ public class WardBedController {
     }
 
     @PostMapping("/beds/transfer")
-    @PreAuthorize("hasAnyRole('NURSE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
     public ResponseEntity<BedResponse> transferBed(
             @Valid @RequestBody BedTransferRequest request,
             @AuthenticationPrincipal UserPrincipal principal
@@ -105,7 +106,7 @@ public class WardBedController {
     }
 
     @PostMapping("/beds/{id}/release")
-    @PreAuthorize("hasAnyRole('NURSE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
     public ResponseEntity<BedResponse> releaseBed(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal
@@ -115,7 +116,7 @@ public class WardBedController {
     }
 
     @PutMapping("/beds/{id}/status")
-    @PreAuthorize("hasAnyRole('NURSE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
     public ResponseEntity<BedResponse> updateBedStatus(
             @PathVariable Long id,
             @RequestParam com.hospital.hpms.entity.BedStatus status,
@@ -133,4 +134,55 @@ public class WardBedController {
                 "occupancyRate", wardBedService.getBedOccupancyRate()
         ));
     }
+
+    // ==========================================
+    // Inpatient Admission Orders Endpoints
+    // ==========================================
+
+    @PostMapping("/admissions/orders")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
+    public ResponseEntity<AdmissionOrderResponse> createAdmissionOrder(
+            @Valid @RequestBody AdmissionOrderRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        AdmissionOrderResponse response = wardBedService.createAdmissionOrder(request, principal);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/admissions/orders")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'NURSE', 'ADMIN', 'RECEPTIONIST')")
+    public ResponseEntity<List<AdmissionOrderResponse>> getAdmissionOrders(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long doctorId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(wardBedService.getAllAdmissionOrders(status, doctorId, principal));
+    }
+
+    @GetMapping("/admissions/orders/pending")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'NURSE', 'ADMIN', 'RECEPTIONIST')")
+    public ResponseEntity<List<AdmissionOrderResponse>> getPendingAdmissionOrders(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(wardBedService.getPendingAdmissionOrders(principal));
+    }
+
+    @GetMapping("/admissions/orders/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'NURSE', 'ADMIN', 'RECEPTIONIST')")
+    public ResponseEntity<List<AdmissionOrderResponse>> getAdmissionOrdersByPatient(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(wardBedService.getAdmissionOrdersByPatient(patientId, principal));
+    }
+
+    @PostMapping("/admissions/orders/{id}/cancel")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
+    public ResponseEntity<AdmissionOrderResponse> cancelAdmissionOrder(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(wardBedService.cancelAdmissionOrder(id, principal));
+    }
 }
+

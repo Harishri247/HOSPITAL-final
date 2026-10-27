@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CreditCard, Plus, DollarSign, CheckCircle2, Clock, 
-  AlertCircle, ShieldCheck, FileText, Search, RefreshCw, Printer
+  CreditCard, Plus, CheckCircle2, Clock, 
+  AlertCircle, ShieldCheck, FileText, Search, RefreshCw, Printer,
+  Calculator, Stethoscope, Pill
 } from 'lucide-react';
-import { billingApi, patientApi } from '../api/apiService';
+import { billingApi, patientApi, appointmentApi } from '../api/apiService';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { CalculateBillModal } from '../components/CalculateBillModal';
 
 export default function BillingPage() {
   const { user } = useAuth();
@@ -23,6 +25,11 @@ export default function BillingPage() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
+
+  // Consultation Billing Queue for Receptionist
+  const [pendingConsultations, setPendingConsultations] = useState([]);
+  const [selectedConsultationToBill, setSelectedConsultationToBill] = useState(null);
+  const [showCalculateBillModal, setShowCalculateBillModal] = useState(false);
 
   // Forms
   const [billForm, setBillForm] = useState({
@@ -45,8 +52,10 @@ export default function BillingPage() {
     remarks: ''
   });
 
-  const canManage = ['ADMIN', 'RECEPTIONIST', 'DOCTOR'].includes(user?.role);
-  const canPay = ['ADMIN', 'RECEPTIONIST', 'PATIENT'].includes(user?.role);
+  const userRole = user?.role || '';
+  const canManage = ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_DOCTOR'].includes(userRole);
+  const canPay = ['ADMIN', 'RECEPTIONIST', 'PATIENT', 'ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_PATIENT'].includes(userRole);
+  const isPatient = userRole === 'PATIENT' || userRole === 'ROLE_PATIENT';
 
   useEffect(() => {
     fetchData();
@@ -58,20 +67,29 @@ export default function BillingPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      if (['ADMIN', 'RECEPTIONIST'].includes(user?.role)) {
-        const [billsRes, reportRes] = await Promise.all([
+      if (['ADMIN', 'RECEPTIONIST', 'ROLE_ADMIN', 'ROLE_RECEPTIONIST'].includes(userRole)) {
+        const [billsRes, reportRes, apptsRes] = await Promise.all([
           billingApi.getAll(),
-          billingApi.getReports()
+          billingApi.getReports(),
+          appointmentApi.filter(null, null, 'COMPLETED').catch(() => ({ data: [] }))
         ]);
         setBills(billsRes.data || []);
         setReports(reportRes.data || null);
-      } else if (user?.role === 'PATIENT' && user?.id) {
-        // If patient, find patient ID from profile or fetch bills
-        const pRes = await patientApi.getAll();
-        const myPatient = (pRes.data || []).find(p => p.userId === user.id);
-        if (myPatient) {
-          const res = await billingApi.getByPatient(myPatient.id);
-          setBills(res.data || []);
+        const allCompleted = apptsRes.data || [];
+        const unbilled = allCompleted.filter(a => a.billingStatus !== 'BILLED' && a.billingStatus !== 'PAID');
+        setPendingConsultations(unbilled);
+      } else if (isPatient) {
+        try {
+          const billsRes = await billingApi.getAll();
+          setBills(billsRes.data || []);
+        } catch (e) {
+          try {
+            const meRes = await patientApi.getMe();
+            if (meRes.data?.id) {
+              const res = await billingApi.getByPatient(meRes.data.id);
+              setBills(res.data || []);
+            }
+          } catch (e2) {}
         }
       } else {
         const billsRes = await billingApi.getAll();
@@ -160,7 +178,7 @@ export default function BillingPage() {
   };
 
   const statusColors = {
-    PAID: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    PAID: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-sky-300',
     PARTIALLY_PAID: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
     PARTIAL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
     UNPAID: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
@@ -183,7 +201,7 @@ export default function BillingPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <CreditCard className="text-teal-600 dark:text-teal-400" /> Billing & Revenue Management
+            <CreditCard className="text-blue-600 dark:text-sky-400" /> Billing & Revenue Management
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Generate hospital invoices, track payments, manage insurance claims, and review financial balances
@@ -193,7 +211,7 @@ export default function BillingPage() {
           {canManage && (
             <button
               onClick={() => setShowGenerateModal(true)}
-              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
             >
               <Plus size={16} /> Create Invoice
             </button>
@@ -211,7 +229,7 @@ export default function BillingPage() {
       {message && (
         <div className={`p-4 rounded-lg flex items-center justify-between text-sm ${
           message.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+            ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-sky-300 border border-blue-200 dark:border-blue-800' 
             : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
         }`}>
           <span>{message.text}</span>
@@ -223,26 +241,26 @@ export default function BillingPage() {
       {reports && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
-              <DollarSign size={24} />
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center font-bold text-xl w-12 h-12">
+              ₹
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Billed</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ${reports.totalBilled?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ₹{reports.totalBilled?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{reports.totalBills} Invoices issued</p>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl">
               <CheckCircle2 size={24} />
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Collected</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                ${reports.totalCollected?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <p className="text-2xl font-bold text-blue-600 dark:text-sky-400">
+                ₹{reports.totalCollected?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{reports.paidBillsCount} Fully paid</p>
             </div>
@@ -255,10 +273,64 @@ export default function BillingPage() {
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Outstanding Balance</p>
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                ${reports.totalOutstanding?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ₹{reports.totalOutstanding?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{reports.pendingBillsCount} Pending / Partially Paid</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Completed Consultations Awaiting Billing Queue (For Receptionist & Admin) */}
+      {canManage && pendingConsultations.length > 0 && (
+        <div className="bg-gradient-to-r from-sky-500/10 via-sky-500/10 to-transparent border border-sky-200 dark:border-blue-800/60 rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-blue-600 dark:text-sky-400" />
+                Completed Consultations Awaiting Bill Calculation ({pendingConsultations.length})
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Doctors have completed these patient consultations. Reception desk can now calculate consultation fees and pharmacy medicines to issue invoices.
+              </p>
+            </div>
+            <span className="px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 rounded-full text-xs font-semibold self-start sm:self-auto">
+              Action Required
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {pendingConsultations.map((appt) => (
+              <div
+                key={appt.id}
+                className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-sky-100 dark:border-blue-900/50 shadow-sm flex flex-col justify-between space-y-2 hover:border-sky-300 transition"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                      {appt.patientName}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {appt.patientNumber}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                    <Stethoscope className="w-3 h-3 text-blue-600" />
+                    Dr. {appt.doctorName} &bull; {appt.appointmentDate}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedConsultationToBill(appt);
+                    setShowCalculateBillModal(true);
+                  }}
+                  className="w-full mt-2 py-2 px-3 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white font-bold rounded-lg text-xs shadow-sm flex items-center justify-center gap-1.5 transition active:scale-98"
+                >
+                  <Calculator className="w-3.5 h-3.5" /> Calculate & Issue Bill
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -272,7 +344,7 @@ export default function BillingPage() {
             placeholder="Search by invoice #, patient name, patient number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
           />
         </div>
 
@@ -283,7 +355,7 @@ export default function BillingPage() {
               onClick={() => setStatusFilter(opt.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 statusFilter === opt.id
-                  ? 'bg-teal-600 text-white'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
               }`}
             >
@@ -301,9 +373,9 @@ export default function BillingPage() {
               <tr>
                 <th className="px-5 py-3">Invoice #</th>
                 <th className="px-5 py-3">Patient</th>
-                <th className="px-5 py-3 text-right">Total</th>
-                <th className="px-5 py-3 text-right">Paid</th>
-                <th className="px-5 py-3 text-right">Balance</th>
+                <th className="px-5 py-3 text-right">Total (₹)</th>
+                <th className="px-5 py-3 text-right">Paid (₹)</th>
+                <th className="px-5 py-3 text-right">Balance (₹)</th>
                 <th className="px-5 py-3 text-center">Status</th>
                 <th className="px-5 py-3">Generated</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -313,7 +385,7 @@ export default function BillingPage() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <RefreshCw className="animate-spin inline mr-2 text-teal-600" size={18} />
+                    <RefreshCw className="animate-spin inline mr-2 text-blue-600" size={18} />
                     Loading billing invoices...
                   </td>
                 </tr>
@@ -335,13 +407,13 @@ export default function BillingPage() {
                         <div className="text-xs text-gray-400">{bill.patientNumber}</div>
                       </td>
                       <td className="px-5 py-4 text-right font-semibold text-gray-900 dark:text-white">
-                        ${bill.totalAmount?.toFixed(2)}
+                        ₹{bill.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="px-5 py-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                        ${bill.paidAmount?.toFixed(2)}
+                      <td className="px-5 py-4 text-right text-blue-600 dark:text-sky-400 font-medium">
+                        ₹{bill.paidAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-4 text-right font-bold text-amber-600 dark:text-amber-400">
-                        ${bill.balanceAmount?.toFixed(2)}
+                        ₹{bill.balanceAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -375,9 +447,9 @@ export default function BillingPage() {
                               });
                               setShowPaymentModal(true);
                             }}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-teal-600 text-white hover:bg-teal-700 transition-colors font-medium"
+                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
                           >
-                            <DollarSign size={13} /> Pay
+                            <CreditCard size={13} /> Pay
                           </button>
                         )}
                         {canManage && (
@@ -428,7 +500,7 @@ export default function BillingPage() {
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Total Amount ($) *
+              Total Amount (₹) *
             </label>
             <input
               type="number"
@@ -478,7 +550,7 @@ export default function BillingPage() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Issue Invoice
             </button>
@@ -489,13 +561,13 @@ export default function BillingPage() {
       {/* Record Payment Modal */}
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title={`Record Payment for Invoice #${selectedBill?.id}`}>
         <form onSubmit={handleRecordPayment} className="space-y-4">
-          <div className="p-3 bg-teal-50 dark:bg-teal-900/30 rounded-lg flex justify-between items-center text-sm">
-            <span className="text-teal-900 dark:text-teal-200">Patient: <strong>{selectedBill?.patientName}</strong></span>
-            <span className="text-teal-900 dark:text-teal-200 font-bold">Balance: ${selectedBill?.balanceAmount?.toFixed(2)}</span>
+          <div className="p-3 bg-sky-50 dark:bg-blue-900/30 rounded-lg flex justify-between items-center text-sm">
+            <span className="text-blue-900 dark:text-sky-200">Patient: <strong>{selectedBill?.patientName}</strong></span>
+            <span className="text-blue-900 dark:text-sky-200 font-bold">Balance: ₹{selectedBill?.balanceAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Amount to Pay ($) *</label>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Amount to Pay (₹) *</label>
             <input
               type="number"
               step="0.01"
@@ -547,7 +619,7 @@ export default function BillingPage() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Process Payment
             </button>
@@ -583,7 +655,7 @@ export default function BillingPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Claimed Amount ($) *</label>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Claimed Amount (₹) *</label>
             <input
               type="number"
               step="0.01"
@@ -635,7 +707,7 @@ export default function BillingPage() {
                 <p className="text-xs text-gray-500">Date: {new Date(selectedBill.generatedDate).toLocaleString()}</p>
               </div>
               <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                statusColors[selectedBill.status] || 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300'
+                statusColors[selectedBill.status] || 'bg-sky-100 text-blue-800 dark:bg-blue-900/50 dark:text-sky-300'
               }`}>
                 {formatStatus(selectedBill.status)}
               </span>
@@ -653,19 +725,76 @@ export default function BillingPage() {
               </div>
             </div>
 
+            {/* Itemized Line Items if consultation/pharmacy breakdown exists */}
+            {(() => {
+              let parsedItems = [];
+              try {
+                if (selectedBill.itemsBreakdown) {
+                  const parsed = JSON.parse(selectedBill.itemsBreakdown);
+                  parsedItems = parsed.items || [];
+                }
+              } catch (e) {}
+
+              if (parsedItems.length === 0 && (selectedBill.consultationFee || selectedBill.prescriptionFee)) {
+                if (selectedBill.consultationFee > 0) {
+                  parsedItems.push({ description: 'Doctor Clinical Consultation Fee', category: 'CONSULTATION', amount: selectedBill.consultationFee });
+                }
+                if (selectedBill.prescriptionFee > 0) {
+                  parsedItems.push({ description: 'Prescribed Medications & Pharmacy', category: 'PRESCRIPTION', amount: selectedBill.prescriptionFee });
+                }
+              }
+
+              if (parsedItems.length > 0) {
+                return (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">Itemized Services & Medications</h4>
+                    <div className="border dark:border-gray-700 rounded-lg overflow-hidden text-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          <tr>
+                            <th className="p-2">Description</th>
+                            <th className="p-2 text-center">Category</th>
+                            <th className="p-2 text-right">Amount (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y dark:divide-gray-700">
+                          {parsedItems.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="p-2 font-medium">{item.description}</td>
+                              <td className="p-2 text-center text-[10px]">
+                                <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                                  item.category === 'CONSULTATION' 
+                                    ? 'bg-sky-100 text-blue-800 dark:bg-blue-900/40 dark:text-sky-300' 
+                                    : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+                                }`}>
+                                  {item.category}
+                                </span>
+                              </td>
+                              <td className="p-2 text-right font-semibold">₹{parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Financial Summary */}
             <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-300">Subtotal & Services</span>
-                <span className="font-semibold text-gray-900 dark:text-white">${selectedBill.totalAmount?.toFixed(2)}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">₹{selectedBill.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <div className="flex justify-between text-blue-600 dark:text-sky-400">
                 <span>Total Amount Paid</span>
-                <span>-${selectedBill.paidAmount?.toFixed(2)}</span>
+                <span>-₹{selectedBill.paidAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-bold text-base text-gray-900 dark:text-white">
                 <span>Remaining Balance Due</span>
-                <span className="text-amber-600 dark:text-amber-400">${selectedBill.balanceAmount?.toFixed(2)}</span>
+                <span className="text-amber-600 dark:text-amber-400">₹{selectedBill.balanceAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
@@ -680,7 +809,7 @@ export default function BillingPage() {
                         <th className="p-2">Date</th>
                         <th className="p-2">Method</th>
                         <th className="p-2">Reference</th>
-                        <th className="p-2 text-right">Amount</th>
+                        <th className="p-2 text-right">Amount (₹)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y dark:divide-gray-700">
@@ -689,7 +818,7 @@ export default function BillingPage() {
                           <td className="p-2">{new Date(p.paymentDate).toLocaleDateString()}</td>
                           <td className="p-2">{p.paymentMethod}</td>
                           <td className="p-2 font-mono text-gray-400">{p.transactionReference || 'N/A'}</td>
-                          <td className="p-2 text-right font-semibold">${p.amount?.toFixed(2)}</td>
+                          <td className="p-2 text-right font-semibold">₹{p.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -715,6 +844,21 @@ export default function BillingPage() {
           </div>
         )}
       </Modal>
+
+      {/* Calculate Bill Modal for Receptionist */}
+      {showCalculateBillModal && (
+        <CalculateBillModal
+          isOpen={showCalculateBillModal}
+          onClose={() => {
+            setShowCalculateBillModal(false);
+            setSelectedConsultationToBill(null);
+          }}
+          appointment={selectedConsultationToBill}
+          onBillGenerated={() => {
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }

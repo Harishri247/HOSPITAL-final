@@ -45,6 +45,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 .treatment(request.getTreatment())
                 .prescriptionId(request.getPrescriptionId())
                 .notes(request.getNotes())
+                .followUpDate(request.getFollowUpDate())
                 .build();
 
         MedicalRecord saved = medicalRecordRepository.save(record);
@@ -58,6 +59,17 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     public List<MedicalRecordResponse> getRecordsByPatient(Long patientId, Long currentUserId) {
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found: " + patientId));
+
+        if (currentUserId != null) {
+            User currentUser = userRepository.findById(currentUserId).orElse(null);
+            if (currentUser != null && currentUser.getRole() == com.hospital.hpms.entity.RoleType.ROLE_PATIENT) {
+                boolean isMine = (patient.getUserId() != null && patient.getUserId().equals(currentUserId))
+                        || (currentUser.getPhoneNumber() != null && currentUser.getPhoneNumber().equals(patient.getPhoneNumber()));
+                if (!isMine) {
+                    throw new com.hospital.hpms.exception.UnauthorizedAccessException("Access denied: You are only authorized to access your own medical records.");
+                }
+            }
+        }
 
         auditLogService.log(currentUserId, "MEDICAL_RECORD_VIEW", "Patient", patientId, null, "Viewed medical history");
 
@@ -78,6 +90,19 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         Patient patient = patientRepository.findById(record.getPatientId()).orElse(null);
         User doctor = userRepository.findById(record.getDoctorId()).orElse(null);
 
+        if (currentUserId != null) {
+            User currentUser = userRepository.findById(currentUserId).orElse(null);
+            if (currentUser != null && currentUser.getRole() == com.hospital.hpms.entity.RoleType.ROLE_PATIENT) {
+                boolean isMine = patient != null && (
+                        (patient.getUserId() != null && patient.getUserId().equals(currentUserId))
+                        || (currentUser.getPhoneNumber() != null && currentUser.getPhoneNumber().equals(patient.getPhoneNumber()))
+                );
+                if (!isMine) {
+                    throw new com.hospital.hpms.exception.UnauthorizedAccessException("Access denied: You are only authorized to access your own medical records.");
+                }
+            }
+        }
+
         auditLogService.log(currentUserId, "MEDICAL_RECORD_VIEW", "MedicalRecord", id, null, "Viewed record detail");
         return toResponse(record, patient, doctor);
     }
@@ -95,6 +120,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         record.setTreatment(request.getTreatment());
         if (request.getPrescriptionId() != null) record.setPrescriptionId(request.getPrescriptionId());
         record.setNotes(request.getNotes());
+        if (request.getFollowUpDate() != null) record.setFollowUpDate(request.getFollowUpDate());
 
         MedicalRecord updated = medicalRecordRepository.save(record);
         auditLogService.log(currentUserId, "MEDICAL_RECORD_MODIFIED", "MedicalRecord", id, oldDiagnosis, updated.getDiagnosis());
@@ -119,6 +145,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 .treatment(r.getTreatment())
                 .prescriptionId(r.getPrescriptionId())
                 .notes(r.getNotes())
+                .followUpDate(r.getFollowUpDate())
                 .createdAt(r.getCreatedAt())
                 .build();
     }

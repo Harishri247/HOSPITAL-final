@@ -1,6 +1,7 @@
 package com.hospital.hpms.dto;
 
 import com.hospital.hpms.entity.LabOrderStatus;
+import com.hospital.hpms.entity.Priority;
 import com.hospital.hpms.entity.ResultFlag;
 import com.hospital.hpms.entity.SpecimenType;
 import jakarta.validation.constraints.NotBlank;
@@ -31,6 +32,10 @@ public class LabDto {
 
         @NotNull(message = "Specimen type is required")
         private SpecimenType specimenType;
+
+        private Priority priority;
+
+        private String clinicalNotes;
     }
 
     @Getter
@@ -48,10 +53,51 @@ public class LabDto {
         private String testName;
         private String testCode;
         private SpecimenType specimenType;
+        private Priority priority;
+        private String clinicalNotes;
         private LabOrderStatus status;
         private LocalDateTime orderedDate;
+        private LocalDateTime receivedDate;
+        private String receivedBy;
+        private String specimenBarcode;
+        private LocalDateTime specimenCollectedDate;
+        private String specimenNotes;
+        private LocalDateTime testStartedDate;
+        private String testingEquipment;
         private LocalDateTime resultDate;
+        private LocalDateTime reviewedDate;
+        private String doctorReviewNotes;
+        private Long reviewedByDoctorId;
+        private String reviewedByDoctorName;
         private LabResultResponse result;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ReceiveOrderRequest {
+        private String receivedBy;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class CollectSpecimenRequest {
+        private String specimenBarcode;
+        private String specimenNotes;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class StartTestingRequest {
+        private String testingEquipment;
     }
 
     @Getter
@@ -72,6 +118,8 @@ public class LabDto {
         private ResultFlag flag;
 
         private String verifiedBy;
+
+        private String remarks;
     }
 
     @Getter
@@ -87,6 +135,16 @@ public class LabDto {
         private String unit;
         private ResultFlag flag;
         private String verifiedBy;
+        private String remarks;
         private LocalDateTime resultDate;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DoctorReviewRequest {
+        private String doctorReviewNotes;
     }
 }

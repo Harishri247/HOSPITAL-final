@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "bills", indexes = {
     @Index(name = "idx_bill_patient", columnList = "patient_id"),
-    @Index(name = "idx_bill_status", columnList = "status")
+    @Index(name = "idx_bill_status", columnList = "status"),
+    @Index(name = "idx_bill_appointment", columnList = "appointment_id")
 })
 @Getter
 @Setter
@@ -26,6 +27,20 @@ public class Bill {
 
     @Column(name = "admission_id")
     private Long admissionId;
+
+    @Column(name = "appointment_id")
+    private Long appointmentId;
+
+    @Column(name = "consultation_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal consultationFee = BigDecimal.ZERO;
+
+    @Column(name = "prescription_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal prescriptionFee = BigDecimal.ZERO;
+
+    @Column(name = "items_breakdown", columnDefinition = "TEXT")
+    private String itemsBreakdown;
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;

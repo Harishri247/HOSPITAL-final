@@ -54,10 +54,19 @@ public class Patient {
 
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "ACTIVE";
+    private String status = "OUTPATIENT";
 
     @Column(name = "user_id")
     private Long userId;
+
+    @Column(name = "primary_doctor_id")
+    private Long primaryDoctorId;
+
+    @Column(name = "assigned_nurse_id")
+    private Long assignedNurseId;
+
+    @Column(name = "assigned_nurse_name", length = 100)
+    private String assignedNurseName;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -73,7 +82,7 @@ public class Patient {
             this.registrationDate = LocalDate.now();
         }
         if (this.status == null) {
-            this.status = "ACTIVE";
+            this.status = "OUTPATIENT";
         }
     }
 

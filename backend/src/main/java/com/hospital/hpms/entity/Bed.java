@@ -42,6 +42,12 @@ public class Bed {
     @Column(name = "assignment_date")
     private LocalDateTime assignmentDate;
 
+    @Column(name = "assigned_nurse_id")
+    private Long assignedNurseId;
+
+    @Column(name = "assigned_nurse_name", length = 100)
+    private String assignedNurseName;
+
     @PrePersist
     protected void onCreate() {
         if (this.status == null) {

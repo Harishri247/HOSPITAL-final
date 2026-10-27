@@ -31,20 +31,45 @@ public class BillingController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @GetMapping
+    @GetMapping("/consultation-preview/{appointmentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST', 'DOCTOR')")
-    public ResponseEntity<List<BillResponse>> getAllBills() {
-        return ResponseEntity.ok(billingService.getAllBills());
+    public ResponseEntity<ConsultationBillPreviewResponse> getConsultationBillPreview(
+            @PathVariable Long appointmentId
+    ) {
+        return ResponseEntity.ok(billingService.calculateConsultationBill(appointmentId));
+    }
+
+    @PostMapping("/generate-consultation-bill")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+    public ResponseEntity<BillResponse> generateConsultationBill(
+            @Valid @RequestBody GenerateConsultationBillRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long userId = principal != null ? principal.getId() : null;
+        BillResponse response = billingService.generateConsultationBill(request, userId);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST', 'DOCTOR', 'PATIENT')")
+    public ResponseEntity<List<BillResponse>> getAllBills(@AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(billingService.getAllBills(principal));
     }
 
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<BillResponse>> getBillsByPatient(@PathVariable Long patientId) {
-        return ResponseEntity.ok(billingService.getBillsByPatient(patientId));
+    public ResponseEntity<List<BillResponse>> getBillsByPatient(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(billingService.getBillsByPatient(patientId, principal));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BillResponse> getBillById(@PathVariable Long id) {
-        return ResponseEntity.ok(billingService.getBillById(id));
+    public ResponseEntity<BillResponse> getBillById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(billingService.getBillById(id, principal));
     }
 
     @PutMapping("/{id}/payment")

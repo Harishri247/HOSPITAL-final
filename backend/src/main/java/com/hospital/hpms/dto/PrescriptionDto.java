@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class PrescriptionDto {
 
@@ -63,6 +64,18 @@ public class PrescriptionDto {
         private Long dispensedBy;
         private String dispensedByName;
         private LocalDateTime dispensedDate;
+        private Long medicineId;
+        private Integer quantityDispensed;
+        private String batchNumber;
+        private String pharmacistNotes;
+        private Boolean isControlled;
+        private Integer stockAvailable;
+        private String patientStatus; // INPATIENT or OUTPATIENT
+        private Boolean isAdmitted;
+        private String bedNumber;
+        private String wardName;
+        private Long assignedNurseId;
+        private String assignedNurseName;
     }
 
     @Getter
@@ -73,6 +86,46 @@ public class PrescriptionDto {
     public static class DispenseRequest {
         @NotNull(message = "Status is required")
         private DispensingStatus status;
+        private Long medicineId;
+        private Integer quantity;
+        private String batchNumber;
         private String notes;
+        private String supervisorSignoff;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PrescriptionSafetyCheckResponse {
+        private Long prescriptionId;
+        private String medicationName;
+        private String dosage;
+        private String frequency;
+        private String duration;
+        private String route;
+        private Long patientId;
+        private String patientName;
+        private String patientNumber;
+        private String doctorName;
+        private Long matchedMedicineId;
+        private String matchedMedicineName;
+        private String genericName;
+        private String category;
+        private Integer stockQuantity;
+        private Integer minThreshold;
+        private String stockStatus; // IN_STOCK, LOW_STOCK, OUT_OF_STOCK, NOT_IN_CATALOG
+        private String batchNumber;
+        private LocalDate expiryDate;
+        private boolean isControlled;
+        private Integer suggestedQuantity;
+        private List<String> safetyAlerts;
+        private String patientStatus;
+        private Boolean isAdmitted;
+        private String bedNumber;
+        private String wardName;
+        private Long assignedNurseId;
+        private String assignedNurseName;
     }
 }

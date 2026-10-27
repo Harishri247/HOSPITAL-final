@@ -22,6 +22,7 @@ public class AdminDto {
 
         @NotBlank(message = "Email is required")
         @Email(message = "Email must be a valid format")
+        @Pattern(regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$", message = "Email ID must end with @gmail.com")
         private String email;
 
         private String password;

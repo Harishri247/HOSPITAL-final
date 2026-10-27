@@ -81,6 +81,8 @@ public class WardBedDto {
         private String patientName;
         private String patientNumber;
         private LocalDateTime assignmentDate;
+        private Long assignedNurseId;
+        private String assignedNurseName;
     }
 
     @Getter
@@ -94,6 +96,8 @@ public class WardBedDto {
 
         @NotNull(message = "Patient ID is required")
         private Long patientId;
+
+        private Long nurseId;
     }
 
     @Getter

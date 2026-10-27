@@ -60,7 +60,7 @@ export const NotificationBell = () => {
     switch (type) {
       case 'APPOINTMENT_CONFIRMED':
         return (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-sky-300">
             <CalendarCheck className="w-2.5 h-2.5" /> CONFIRMED
           </span>
         );
@@ -78,7 +78,7 @@ export const NotificationBell = () => {
         );
       case 'APPOINTMENT':
         return (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-100 text-blue-800 dark:bg-blue-950/60 dark:text-sky-300">
             APPOINTMENT
           </span>
         );
@@ -112,7 +112,7 @@ export const NotificationBell = () => {
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Notifications</span>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 rounded text-[10px] font-semibold">
+                <span className="px-1.5 py-0.2 bg-sky-100 text-blue-800 dark:bg-blue-950/60 dark:text-sky-300 rounded text-[10px] font-semibold">
                   {unreadCount} new
                 </span>
               )}
@@ -120,7 +120,7 @@ export const NotificationBell = () => {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-medium"
+                className="text-xs text-blue-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-medium"
               >
                 <CheckCheck className="w-3.5 h-3.5" /> Mark all read
               </button>
@@ -138,19 +138,19 @@ export const NotificationBell = () => {
                   key={n.id}
                   onClick={() => !n.isRead && handleMarkAsRead(n.id)}
                   className={`p-3.5 text-xs transition cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
-                    !n.isRead ? 'bg-teal-50/40 dark:bg-teal-950/20 font-medium' : 'text-slate-500'
+                    !n.isRead ? 'bg-sky-50/40 dark:bg-blue-950/20 font-medium' : 'text-slate-500'
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <span
                       className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
                         n.type === 'APPOINTMENT_CONFIRMED'
-                          ? 'bg-emerald-500'
+                          ? 'bg-sky-500'
                           : n.type === 'APPOINTMENT_CANCELLED' || n.priority === 'URGENT' || n.priority === 'HIGH'
                           ? 'bg-rose-500'
                           : n.type === 'APPOINTMENT_NO_SHOW'
                           ? 'bg-slate-400'
-                          : 'bg-teal-500'
+                          : 'bg-sky-500'
                       }`}
                     />
                     <div className="flex-1 min-w-0">

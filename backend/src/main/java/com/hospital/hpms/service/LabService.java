@@ -18,4 +18,10 @@ public interface LabService {
     LabOrderResponse getOrderById(Long orderId);
     LabOrderResponse getOrderById(Long orderId, UserPrincipal principal);
     long getPendingOrdersCount();
+
+    // End-to-end workflow transitions
+    LabOrderResponse receiveOrder(Long orderId, ReceiveOrderRequest request, Long labTechUserId);
+    LabOrderResponse collectSpecimen(Long orderId, CollectSpecimenRequest request, Long labTechUserId);
+    LabOrderResponse startTesting(Long orderId, StartTestingRequest request, Long labTechUserId);
+    LabOrderResponse doctorReview(Long orderId, DoctorReviewRequest request, Long doctorId);
 }

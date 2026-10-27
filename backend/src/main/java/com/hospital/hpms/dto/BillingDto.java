@@ -22,12 +22,76 @@ public class BillingDto {
         private Long patientId;
 
         private Long admissionId;
+        private Long appointmentId;
+        private BigDecimal consultationFee;
+        private BigDecimal prescriptionFee;
+        private String itemsBreakdown;
 
         @NotNull(message = "Total amount is required")
         @DecimalMin(value = "0.01", message = "Total amount must be greater than zero")
         private BigDecimal totalAmount;
 
         private String insuranceClaimId;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class GenerateConsultationBillRequest {
+        @NotNull(message = "Appointment ID is required")
+        private Long appointmentId;
+
+        @NotNull(message = "Patient ID is required")
+        private Long patientId;
+
+        private BigDecimal consultationFee;
+        private BigDecimal prescriptionFee;
+
+        @NotNull(message = "Total amount is required")
+        @DecimalMin(value = "0.01", message = "Total amount must be greater than zero")
+        private BigDecimal totalAmount;
+
+        private String itemsBreakdown;
+        private String insuranceClaimId;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BillItemDto {
+        private String description;
+        private String category; // CONSULTATION, PRESCRIPTION, LAB, OTHER
+        private Integer quantity;
+        private BigDecimal unitPrice;
+        private BigDecimal amount;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ConsultationBillPreviewResponse {
+        private Long appointmentId;
+        private Long patientId;
+        private String patientName;
+        private String patientNumber;
+        private Long doctorId;
+        private String doctorName;
+        private String appointmentDate;
+        private String timeSlot;
+        private String diagnosis;
+        private BigDecimal consultationFee;
+        private BigDecimal prescriptionFee;
+        private BigDecimal totalAmount;
+        private List<BillItemDto> items;
+        private boolean isBilled;
+        private Long existingBillId;
+        private BillStatus existingBillStatus;
     }
 
     @Getter
@@ -73,6 +137,10 @@ public class BillingDto {
         private String patientName;
         private String patientNumber;
         private Long admissionId;
+        private Long appointmentId;
+        private BigDecimal consultationFee;
+        private BigDecimal prescriptionFee;
+        private String itemsBreakdown;
         private BigDecimal totalAmount;
         private BigDecimal paidAmount;
         private BigDecimal balanceAmount;

@@ -32,7 +32,7 @@ public class LabController {
     }
 
     @GetMapping("/orders")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'LAB_TECHNICIAN', 'NURSE')")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'LAB_TECHNICIAN', 'NURSE', 'PATIENT')")
     public ResponseEntity<List<LabOrderResponse>> getAllOrders(@AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(labService.getAllOrders(principal));
     }
@@ -59,6 +59,39 @@ public class LabController {
         return ResponseEntity.ok(labService.getPendingOrders(principal));
     }
 
+    @PutMapping("/orders/{id}/receive")
+    @PreAuthorize("hasAnyRole('LAB_TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<LabOrderResponse> receiveOrder(
+            @PathVariable Long id,
+            @RequestBody(required = false) ReceiveOrderRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long userId = principal != null ? principal.getId() : null;
+        return ResponseEntity.ok(labService.receiveOrder(id, request, userId));
+    }
+
+    @PutMapping("/orders/{id}/collect-specimen")
+    @PreAuthorize("hasAnyRole('LAB_TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<LabOrderResponse> collectSpecimen(
+            @PathVariable Long id,
+            @RequestBody(required = false) CollectSpecimenRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long userId = principal != null ? principal.getId() : null;
+        return ResponseEntity.ok(labService.collectSpecimen(id, request, userId));
+    }
+
+    @PutMapping("/orders/{id}/start-test")
+    @PreAuthorize("hasAnyRole('LAB_TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<LabOrderResponse> startTesting(
+            @PathVariable Long id,
+            @RequestBody(required = false) StartTestingRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long userId = principal != null ? principal.getId() : null;
+        return ResponseEntity.ok(labService.startTesting(id, request, userId));
+    }
+
     @PutMapping("/results/{orderId}")
     @PreAuthorize("hasAnyRole('LAB_TECHNICIAN', 'ADMIN')")
     public ResponseEntity<LabResultResponse> recordResult(
@@ -68,6 +101,17 @@ public class LabController {
     ) {
         Long userId = principal != null ? principal.getId() : null;
         return ResponseEntity.ok(labService.recordResult(orderId, request, userId));
+    }
+
+    @PutMapping("/orders/{id}/doctor-review")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
+    public ResponseEntity<LabOrderResponse> doctorReview(
+            @PathVariable Long id,
+            @RequestBody(required = false) DoctorReviewRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Long userId = principal != null ? principal.getId() : null;
+        return ResponseEntity.ok(labService.doctorReview(id, request, userId));
     }
 
     @GetMapping("/critical-values")
